@@ -8,13 +8,24 @@ public class Student {
     private String name;
     private String surname;
     private String description;
-    private Date dateOfBirthday;
+    private Date dateOfBirthday;//LocalDate
 
-    private Timestamp createdAt;
+    private Timestamp createdAt;//LocalDateTime
     private int teacherId;
+    private String teacherName;
+
+    //private Teacher teacher;
     private int idUpdate;
 
-    public Student(String name,String surname,String description,Date dateOfBirthday,int teacherId){
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public Student(String name, String surname, String description, Date dateOfBirthday, int teacherId) {
         this.name = name;
         this.surname = surname;
         this.description = description;
@@ -22,7 +33,7 @@ public class Student {
         this.teacherId = teacherId;
     }
 
-    public Student(int id, String name, String surname, String description, Date dateOfBirthday, int teacherId,int idUpdate){
+    public Student(int id, String name, String surname, String description, Date dateOfBirthday, int teacherId, int idUpdate) {
         this.id = id;
         this.name = name;
         this.surname = surname;
@@ -32,7 +43,8 @@ public class Student {
         this.idUpdate = idUpdate;
     }
 
-    public Student(){}
+    public Student() {
+    }
 
     @Override
     public String toString() {
@@ -43,7 +55,9 @@ public class Student {
                 ", description='" + description + '\'' +
                 ", dateOfBirthday=" + dateOfBirthday +
                 ", createdAt=" + createdAt +
-                ", teacherId=" + teacherId +
+
+                ", teacherName='" + teacherName + '\'' +
+
                 '}';
     }
 

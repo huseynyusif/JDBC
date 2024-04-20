@@ -1,18 +1,24 @@
 package org.example;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class DBProcess {
     private static Connection connection = DBConnection.getConnection();
+
     private static PreparedStatement preparedStatement = null;
     private static ResultSet resultSet = null;
 
-
     public static void createTable() {
-        //text
+
+        if (connection == null) {
+            System.out.println("Bağlantı sağlanamadı!");
+            return;
+        }
+
         Scanner scanner = new Scanner(System.in);
         System.out.println("Write the name of the table you want to create: ");
         String tableName = scanner.next();
@@ -37,11 +43,10 @@ public class DBProcess {
                     throw new RuntimeException(e);
                 }
             }
-            DBConnection.closeConnection();
+            //DBConnection.closeConnection();
         }
 
     }
-
 
     public static void insertData(Student student) {
         try {
@@ -59,15 +64,15 @@ public class DBProcess {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
-            //try with resources
-            try {
-                preparedStatement.close();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
-        DBConnection.closeConnection();
-
+        //DBConnection.closeConnection();
     }
 
     public static void updateData(Student student) {
@@ -85,18 +90,114 @@ public class DBProcess {
             preparedStatement.setInt(7, student.getId());
 
 
-            int a = preparedStatement.executeUpdate();
-            System.out.println(a + " Table has successfully update! ");
+            preparedStatement.executeUpdate();
+            System.out.println("Table has successfully update! ");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+
+    public static void updateData2() {
+        Scanner scanner = new Scanner(System.in);
+
+        try {
+            int minID = getMinID();
+            int maxID = getMaxID();
+
+
+            System.out.println("Minimum ID: " + minID);
+            System.out.println("Maximum ID: " + maxID);
+
+            System.out.println("Enter student ID");
+            int studentID = scanner.nextInt();
+
+
+            String querySelect = "SELECT * FROM student WHERE id = ?";
             try {
-                preparedStatement.close();
+                preparedStatement = connection.prepareStatement(querySelect);
+                preparedStatement.setInt(1, studentID);
+                resultSet = preparedStatement.executeQuery();
+
+                if (!resultSet.next()) {
+                    System.out.println("Student with ID " + studentID + " not found.");
+                    System.out.println("Please enter an ID within the valid range.");
+                }
+
             } catch (SQLException e) {
+                System.out.println("Failed to fetch student data.");
                 throw new RuntimeException(e);
             }
-            DBConnection.closeConnection();
+
+
+            System.out.println("Enter the column name to update (id, name, surname, description, dob, teacher_id):");
+            String columnName = scanner.next();
+            System.out.println("Enter the new value for " + columnName + ":");
+
+
+            String newValue = scanner.next();
+
+            Object newValueObj = null;
+            switch (columnName) {
+                case "id":
+                case "teacher_id":
+                    newValueObj = Integer.parseInt(newValue);
+                    break;
+                case "dob":
+                    //newValueObj = Date.valueOf(newValue);
+                    newValueObj = LocalDate.parse(newValue);
+                    break;
+                default:
+                    newValueObj = newValue;
+                    break;
+            }
+
+
+            String queryUpdate = "UPDATE student SET " + columnName + " = ? WHERE id = ?";
+            try {
+                preparedStatement = connection.prepareStatement(queryUpdate);
+                preparedStatement.setObject(1, newValueObj);
+                preparedStatement.setInt(2, studentID);
+                preparedStatement.executeUpdate();
+                System.out.println("Data successfully updated!");
+            } catch (SQLException e) {
+                System.out.println("Failed to update data.");
+                throw new RuntimeException(e);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Failed to fetch min/max ID.");
+            throw new RuntimeException(e);
         }
+    }
+
+
+    public static int getMinID() throws SQLException {
+        String query = "SELECT MIN(id) FROM student";
+        preparedStatement = connection.prepareStatement(query);
+        resultSet = preparedStatement.executeQuery();
+        resultSet.next();
+        int minID = resultSet.getInt(1);
+        preparedStatement.close();
+        return minID;
+    }
+
+    public static int getMaxID() throws SQLException {
+        String query = "SELECT MAX(id) FROM student";
+        preparedStatement = connection.prepareStatement(query);
+        resultSet = preparedStatement.executeQuery();
+        resultSet.next();
+        int maxID = resultSet.getInt(1);
+        preparedStatement.close();
+        return maxID;
     }
 
 
@@ -107,8 +208,16 @@ public class DBProcess {
             preparedStatement = connection.prepareStatement(query);
             preparedStatement.setInt(1, id);
 
-            preparedStatement.execute();
-            System.out.println("Table deleted from database !");
+            int affectedRows = preparedStatement.executeUpdate();
+            if (affectedRows == 0) {
+                System.out.println("No student with ID " + id + " found in the database.");
+
+                int minId = getMinID();
+                int maxId = getMaxID();
+                System.out.println("Please enter a valid ID within the existing range: (" + minId + "-" + maxId + ")");
+            } else {
+                System.out.println("Student with ID " + id + " successfully deleted from the database.");
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
@@ -117,7 +226,7 @@ public class DBProcess {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-            DBConnection.closeConnection();
+            //DBConnection.closeConnection();
         }
     }
 
@@ -134,6 +243,7 @@ public class DBProcess {
 
             resultSet = preparedStatement.executeQuery();
 
+
             while (resultSet.next()) {
                 int id = resultSet.getInt("id");
                 String name = resultSet.getString("name");
@@ -148,6 +258,15 @@ public class DBProcess {
                         ", Created At: " + createdAt + ", Teacher ID: " + teacherId);
 
             }
+
+            if (!resultSet.next()) {
+                System.out.println("Student with ID " + studentID + " not found.");
+                System.out.println("Please enter an ID within the valid range.");
+
+                int minID = getMinID();
+                int maxID = getMaxID();
+                System.out.println("You can only choose from this range: " + minID + "-" + maxID);
+            }
         } catch (SQLException e) {
             System.out.println("Connection failure");
             throw new RuntimeException(e);
@@ -158,7 +277,7 @@ public class DBProcess {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-            DBConnection.closeConnection();
+            //DBConnection.closeConnection();
 
         }
     }
@@ -174,11 +293,16 @@ public class DBProcess {
             preparedStatement = connection.prepareStatement(query);
             resultSet = preparedStatement.executeQuery();
 
+
             while (resultSet.next()) {
                 String name = resultSet.getString(1);
                 String surname = resultSet.getString(2);
 
                 System.out.println("Name: " + name + " surname: " + surname);
+            }
+
+            if (!resultSet.next()) {
+                System.out.println("Your letter: " + "'" + letter + "'" + " not found.");
             }
 
         } catch (SQLException e) {
@@ -198,99 +322,7 @@ public class DBProcess {
                     throw new RuntimeException(e);
                 }
             }
-            DBConnection.closeConnection();
-        }
-
-    }
-
-
-    public static void witchMethodWantTo() {
-
-
-        Scanner scanner = new Scanner(System.in);
-
-        while (true) {
-            System.out.println("Choose an operation:");
-            System.out.println("1. Create Table");
-            System.out.println("2. Insert Data");
-            System.out.println("3. Update Data");
-            System.out.println("4. Delete Data");
-            System.out.println("5. Get Data by ID");
-            System.out.println("6. Get Data with Like Operator");
-            System.out.println("7. Get information about all students ");
-            System.out.println("0. Exit");
-
-            int choice = scanner.nextInt();
-
-            switch (choice) {
-                case 1:
-                    createTable();
-                    break;
-                case 2:
-                    System.out.println("Enter student information:");
-                    System.out.print("Name: ");
-                    String name = scanner.next();
-                    System.out.print("Surname: ");
-                    String surname = scanner.next();
-                    System.out.print("Description: ");
-                    String description = scanner.next();
-                    System.out.print("Date of Birth (yyyy-mm-dd): ");
-                    String dobString = scanner.next();
-                    Date dob = Date.valueOf(dobString);
-                    System.out.print("Teacher ID: ");
-                    int teacherId = scanner.nextInt();
-
-
-                    Student student = new Student(name, surname, description, dob, teacherId);
-
-
-                    insertData(student);
-                    break;
-                case 3:
-                    System.out.println("Enter Student Information: ");
-                    System.out.println("ID: (new)");
-                    int id1 = scanner.nextInt();
-                    System.out.println("Name: ");
-                    String name1 = scanner.next();
-                    System.out.println("Surname: ");
-                    String surname1 = scanner.next();
-                    System.out.println("Description: ");
-                    String description1 = scanner.next();
-                    System.out.println("Date of Birthday (yyyy-mm-dd) : ");
-                    String dateOfBirthday = scanner.next();
-                    Date dateOfBirthday1 = Date.valueOf(dateOfBirthday);
-                    System.out.println("Teacher ID  (number)");
-                    int teacherId1 = scanner.nextInt();
-                    System.out.println("Which ID do you want to change this with? (number)");
-                    int idUpdate1 = scanner.nextInt();
-
-                    Student student1 = new Student(id1, name1, surname1, description1, dateOfBirthday1, teacherId1, idUpdate1);
-
-                    updateData(student1);
-                    break;
-                case 4:
-                    System.out.println("Which id do you want to delete ? ");
-                    int id = scanner.nextInt();
-                    deleteDataById(id);
-                    break;
-                case 5:
-                    System.out.println("Which id do you want to search for ? ");
-                    getDataById();
-                    break;
-                case 6:
-                    System.out.println("What letter do you want the name to start with? ");
-                    getDataWithLikeOperator();
-                    break;
-                case 7:
-                    System.out.println("Get information about all students");
-                    getAllStudentsAndPrint();
-                    break;
-                case 0:
-                    System.out.println("Exiting...");
-                    return;
-                default:
-                    System.out.println("Invalid choice. Please enter a valid option.");
-            }
+            //DBConnection.closeConnection();
         }
     }
 
@@ -299,7 +331,10 @@ public class DBProcess {
         List<Student> studentList = new ArrayList<>();
 
         try {
-            String query = "SELECT * FROM student";
+            String query = "SELECT s.id,s.name,s.surname,s.description,s.dob,s.created_at,t.name AS teacher_name " +
+                    "FROM student s " +
+                    "INNER JOIN teacher t ON t.id = s.teacher_id;";
+
             preparedStatement = connection.prepareStatement(query);
             resultSet = preparedStatement.executeQuery();
 
@@ -311,7 +346,7 @@ public class DBProcess {
                 student.setDescription(resultSet.getString("description"));
                 student.setDateOfBirthday(resultSet.getDate("dob"));
                 student.setCreatedAt(resultSet.getTimestamp("created_at"));
-                student.setTeacherId(resultSet.getInt("teacher_id"));
+                student.setTeacherName(resultSet.getString("teacher_name"));
 
                 studentList.add(student);
             }
@@ -332,10 +367,8 @@ public class DBProcess {
                     throw new RuntimeException(e);
                 }
             }
-
-            DBConnection.closeConnection();
+            //DBConnection.closeConnection();
         }
-
         return studentList;
     }
 
@@ -348,5 +381,6 @@ public class DBProcess {
         }
         return studentList;
     }
+
 }
 
