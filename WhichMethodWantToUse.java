@@ -1,15 +1,13 @@
 package org.example;
 
-
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.Scanner;
 
 
+public class WhichMethodWantToUse {
 
-public class WitchMethodWantToUse {
-
-    public static void witchMethodWantTo() {
+    public static void whichMethodWantTo() {
 
         Scanner scanner = new Scanner(System.in);
         try{

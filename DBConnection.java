@@ -8,14 +8,14 @@ public class DBConnection {
     private static Connection connection = null;
 
     public static Connection getConnection() {
-            try {
-                connection = DriverManager.getConnection("${DB_URL}", "${DB_USERNAME}", "${DB_PASSWORD}");
-                System.out.println("Connection database has successfully !");
-            } catch (SQLException e) {
-                System.out.println("Connection database failure");
-                throw new RuntimeException(e);
-            }
-            return connection;
+        try {
+            connection = DriverManager.getConnection("${DB_URL}", "${DB_USERNAME}", "${DB_PASSWORD}");
+            System.out.println("Connection database has successfully !");
+        } catch (SQLException e) {
+            System.out.println("Connection database failure");
+            throw new RuntimeException(e);
+        }
+        return connection;
     }
 
 

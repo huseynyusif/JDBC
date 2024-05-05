@@ -13,8 +13,6 @@ public class Student {
     private Timestamp createdAt;//LocalDateTime
     private int teacherId;
     private String teacherName;
-
-    //private Teacher teacher;
     private int idUpdate;
 
     public String getTeacherName() {
